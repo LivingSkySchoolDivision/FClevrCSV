@@ -4,19 +4,26 @@ using System.Text.RegularExpressions;
 
 namespace FClevrCSV;
 
-public class ClevrCSVParser : IDisposable
+public class BrokenClevrCSVParser : IDisposable
 {
-    private string _Filename = string.Empty;    
+    private string _Filename = string.Empty;
     int maxRescueAttempts = 25;
+    private bool replaceNewLines = false;
     private readonly string regex_pattern_capture = @"""(?<one>.*?)"",""(?<two>.*?)"",""(?<three>.*?)"",""(?<four>.*?)"",""(?<five>.*?)"",""(?<six>.*?)"",""(?<seven>.*?)"",""(?<eight>.*?)"",""(?<nine>.*?)"",""(?<ten>.*?)"",""(?<eleven>.*?)""";
 
     private StreamReader _streamReader = new StreamReader(new MemoryStream());
 
-    public ClevrCSVParser(string Filename)
+    public BrokenClevrCSVParser(string Filename)
     {
         this._Filename = Filename;
-
         this._streamReader = new StreamReader(this._Filename);
+    }
+
+    public BrokenClevrCSVParser(string Filename, bool ReplaceNewlines)
+    {
+        this._Filename = Filename;
+        this._streamReader = new StreamReader(this._Filename);
+        this.replaceNewLines = ReplaceNewlines;
     }
 
     public bool EOF { get { return _streamReader.EndOfStream; } }
@@ -29,15 +36,21 @@ public class ClevrCSVParser : IDisposable
         return regexMatch.Success;
     }
 
-    private static string SanitizeForCSV(string InputText) 
-    {
-        return InputText
+    private string SanitizeForCSV(string InputText)
+    {        
+        string returnMe = InputText
             .Replace("\"", "\"\"")
             .Replace("&amp;","&")
             .Replace("–","-")
             .Replace('’','\'')
-            .Replace('“', '\"')
-            .Replace('\n','|');
+            .Replace('“', '\"');
+
+        if (this.replaceNewLines)
+        {
+            returnMe = returnMe.Replace('\n','|');
+        }
+
+        return returnMe;
     }
 
     private ClevrCSVRecord ParseObject(string InputText)
@@ -84,7 +97,7 @@ public class ClevrCSVParser : IDisposable
             {
                 throw new Exception($"GetNextObject - Failed to parse:\n---\n{rawText.ToString()}\n---\n");
             }
-        }        
+        }
 
         return ParseObject(rawText.ToString());
     }
@@ -110,7 +123,7 @@ public class ClevrCSVParser : IDisposable
             {
                 break;
             }
-            
+
             previous_character = current_character;
         }
 
